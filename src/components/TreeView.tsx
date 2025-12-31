@@ -6,25 +6,80 @@ import type { MouseEvent } from 'react';
 import { useEffect, useRef } from 'react';
 import { Tree } from 'react-arborist';
 import type { NodeRendererProps, TreeApi } from 'react-arborist';
-import { ChevronRight, ChevronDown, FileText, MessageSquare, Code } from 'lucide-react';
+import {
+  ChevronRight,
+  ChevronDown,
+  FileText,
+  MessageSquare,
+  Code,
+  Calendar,
+  Hash,
+  DollarSign,
+  Globe,
+  Type,
+  List,
+  Quote,
+  AlignLeft,
+  FileCode,
+  User,
+  Scissors,
+  Smile,
+  Box
+} from 'lucide-react';
 import { useXML } from '../context/XMLContext';
 import type { XMLNode } from '../types/xml.types';
 import clsx from 'clsx';
 
 /**
+ * Get icon and color for CLDR section
+ */
+function getSectionIcon(nodeName: string): { icon: typeof FileText; color: string } {
+  const sectionIcons: Record<string, { icon: typeof FileText; color: string }> = {
+    // Main CLDR sections
+    dates: { icon: Calendar, color: 'text-orange-600' },
+    numbers: { icon: Hash, color: 'text-purple-600' },
+    currencies: { icon: DollarSign, color: 'text-green-600' },
+    localeDisplayNames: { icon: Globe, color: 'text-blue-600' },
+    characters: { icon: Type, color: 'text-indigo-600' },
+    listPatterns: { icon: List, color: 'text-teal-600' },
+    delimiters: { icon: Quote, color: 'text-pink-600' },
+    layout: { icon: AlignLeft, color: 'text-cyan-600' },
+    posix: { icon: FileCode, color: 'text-gray-600' },
+    personNames: { icon: User, color: 'text-rose-600' },
+    segmentations: { icon: Scissors, color: 'text-amber-600' },
+    annotations: { icon: Smile, color: 'text-yellow-600' },
+    units: { icon: Box, color: 'text-lime-600' },
+    characterLabels: { icon: Type, color: 'text-violet-600' },
+  };
+
+  return sectionIcons[nodeName] || { icon: FileText, color: 'text-gray-500' };
+}
+
+/**
  * Get icon for node type
  */
-function getNodeIcon(node: XMLNode) {
-  switch (node.type) {
-    case 'element':
-      return FileText;
-    case 'comment':
-      return MessageSquare;
-    case 'cdata':
-      return Code;
-    default:
-      return FileText;
+function getNodeIcon(node: XMLNode): { icon: typeof FileText; color: string } {
+  // Special handling for comments and CDATA
+  if (node.type === 'comment') {
+    return { icon: MessageSquare, color: 'text-gray-500' };
   }
+  if (node.type === 'cdata') {
+    return { icon: Code, color: 'text-gray-500' };
+  }
+
+  // Check if this is a top-level CLDR section
+  const pathParts = node.path.split('/');
+  // Path format is typically: /root/ldml/sectionName or similar
+  // We want to check if this node is a direct child of ldml
+  if (pathParts.length <= 4 && node.name) {
+    const sectionIcon = getSectionIcon(node.name);
+    if (sectionIcon.icon !== FileText) {
+      return sectionIcon;
+    }
+  }
+
+  // Default icon
+  return { icon: FileText, color: 'text-gray-500' };
 }
 
 /**
@@ -93,7 +148,7 @@ function formatXMLTag(xmlNode: XMLNode, isLeaf: boolean): JSX.Element {
 function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<XMLNode>) {
   const { selectNode, selectedNode } = useXML();
   const xmlNode = node.data;
-  const Icon = getNodeIcon(xmlNode);
+  const { icon: Icon, color: iconColor } = getNodeIcon(xmlNode);
   const isSelected = selectedNode?.id === xmlNode.id;
   const xmlTag = formatXMLTag(xmlNode, node.isLeaf);
 
@@ -132,7 +187,7 @@ function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<XMLNode>) {
       </span>
 
       {/* Node Icon */}
-      <Icon className="w-4 h-4 flex-shrink-0 text-gray-500" />
+      <Icon className={clsx('w-4 h-4 flex-shrink-0', iconColor)} />
 
       {/* XML Tag */}
       <span className="text-sm truncate flex-1 min-w-0 font-mono">

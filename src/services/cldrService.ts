@@ -34,14 +34,61 @@ const CACHE_VERSION = 2;
 
 /**
  * Parse locale ID into components
+ *
+ * Locale ID format: language[_Script][_Territory]
+ * - language: 2-3 lowercase letters (e.g., en, zh)
+ * - Script: 4 letters, Title case (e.g., Latn, Cyrl, Hans)
+ * - Territory: 2 uppercase letters OR 3 digits (e.g., US, GB, 001)
  */
 export function parseLocaleId(localeId: string): LocaleComponents {
   const parts = localeId.split('_');
 
+  if (parts.length === 1) {
+    // Just language: en, fr, de
+    return {
+      language: parts[0],
+      script: undefined,
+      territory: undefined,
+    };
+  }
+
+  if (parts.length === 2) {
+    // Could be language_Script OR language_Territory
+    const secondPart = parts[1];
+
+    // Check if it's a script (4 characters, starts with uppercase)
+    if (secondPart.length === 4 && /^[A-Z][a-z]{3}$/.test(secondPart)) {
+      // language_Script: sr_Latn, zh_Hans
+      return {
+        language: parts[0],
+        script: secondPart,
+        territory: undefined,
+      };
+    }
+
+    // Otherwise it's a territory (2 uppercase letters or 3 digits)
+    // language_Territory: en_US, ar_001
+    return {
+      language: parts[0],
+      script: undefined,
+      territory: secondPart,
+    };
+  }
+
+  if (parts.length === 3) {
+    // language_Script_Territory: zh_Hans_CN
+    return {
+      language: parts[0],
+      script: parts[1],
+      territory: parts[2],
+    };
+  }
+
+  // Fallback for unexpected formats
   return {
     language: parts[0],
-    script: parts.length === 3 ? parts[1] : undefined,
-    territory: parts.length === 3 ? parts[2] : parts.length === 2 ? parts[1] : undefined,
+    script: undefined,
+    territory: undefined,
   };
 }
 

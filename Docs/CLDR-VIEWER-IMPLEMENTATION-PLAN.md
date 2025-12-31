@@ -954,12 +954,15 @@ src/
 **Estimated**: 20-30 hours
 
 ### Phase 2: CLDR UI Enhancements (Week 2-3)
-- ✅ Metadata panel
-- ✅ Enhanced tree view
-- ✅ CLDR-specific detail panel
-- ✅ Section icons and colors
+- ✅ Metadata panel with navigation to sections
+- ✅ Enhanced tree view with section icons
+- ✅ Color-coded section icons (14 types)
+- ✅ Compact metadata layout
+- ✅ Script vs territory detection fix (BCP 47 compliance)
+- ⏳ CLDR-specific detail panel (in progress)
 
 **Estimated**: 15-20 hours
+**Status**: 80% complete - detail panel enhancements remaining
 
 ### Phase 3: Editing (Week 3-5)
 - ✅ Edit mode toggle
