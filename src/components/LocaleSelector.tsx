@@ -168,10 +168,10 @@ export function LocaleSelector() {
         <div className="text-xs text-gray-500 dark:text-gray-400">{locale.id}</div>
       </div>
       {showFavorite && (
-        <button
+        <span
           onClick={(e) => toggleFavorite(locale.id, e)}
           className={clsx(
-            'ml-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity',
+            'ml-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer',
             'hover:bg-gray-200 dark:hover:bg-gray-600',
             favorites.includes(locale.id) && 'opacity-100'
           )}
@@ -184,7 +184,7 @@ export function LocaleSelector() {
                 : 'text-gray-400'
             )}
           />
-        </button>
+        </span>
       )}
     </button>
   );

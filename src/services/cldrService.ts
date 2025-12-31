@@ -19,12 +19,18 @@ const CLDR_MAIN_PATH = 'common/main';
 const CACHE_KEYS = {
   LOCALE_LIST: 'cldr_locale_list',
   LOCALE_LIST_TIMESTAMP: 'cldr_locale_list_timestamp',
+  CACHE_VERSION: 'cldr_cache_version',
 };
 
 /**
  * Cache duration: 24 hours
  */
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
+
+/**
+ * Cache version - increment this when display name logic changes
+ */
+const CACHE_VERSION = 2;
 
 /**
  * Parse locale ID into components
@@ -44,6 +50,10 @@ export function parseLocaleId(localeId: string): LocaleComponents {
  */
 export function getLocaleDisplayName(localeId: string): string {
   const components = parseLocaleId(localeId);
+
+  // Use Intl.DisplayNames to get language and territory names
+  const languageDisplay = new Intl.DisplayNames(['en'], { type: 'language' });
+  const regionDisplay = new Intl.DisplayNames(['en'], { type: 'region' });
 
   // Language names (basic set - can be expanded)
   const languageNames: Record<string, string> = {
@@ -80,41 +90,6 @@ export function getLocaleDisplayName(localeId: string): string {
     sk: 'Slovak',
   };
 
-  // Territory names (basic set)
-  const territoryNames: Record<string, string> = {
-    US: 'United States',
-    GB: 'United Kingdom',
-    CA: 'Canada',
-    AU: 'Australia',
-    NZ: 'New Zealand',
-    FR: 'France',
-    DE: 'Germany',
-    ES: 'Spain',
-    IT: 'Italy',
-    PT: 'Portugal',
-    BR: 'Brazil',
-    MX: 'Mexico',
-    AR: 'Argentina',
-    CN: 'China',
-    JP: 'Japan',
-    KR: 'South Korea',
-    IN: 'India',
-    RU: 'Russia',
-    SA: 'Saudi Arabia',
-    AE: 'UAE',
-    CH: 'Switzerland',
-    AT: 'Austria',
-    BE: 'Belgium',
-    NL: 'Netherlands',
-    SE: 'Sweden',
-    NO: 'Norway',
-    DK: 'Denmark',
-    FI: 'Finland',
-    PL: 'Poland',
-    CZ: 'Czech Republic',
-    TR: 'Turkey',
-  };
-
   // Script names
   const scriptNames: Record<string, string> = {
     Hans: 'Simplified',
@@ -126,13 +101,23 @@ export function getLocaleDisplayName(localeId: string): string {
 
   const languageName = languageNames[components.language] || components.language.toUpperCase();
   const scriptName = components.script ? scriptNames[components.script] : undefined;
-  const territoryName = components.territory ? territoryNames[components.territory] : undefined;
+
+  // Get territory name using Intl.DisplayNames API
+  let territoryName: string | undefined;
+  if (components.territory) {
+    try {
+      territoryName = regionDisplay.of(components.territory);
+    } catch (error) {
+      // Fallback to territory code if not recognized
+      territoryName = components.territory;
+    }
+  }
 
   // Build display name
   let displayName = languageName;
 
   if (scriptName && territoryName) {
-    displayName += ` (${scriptName}, ${territoryName})`;
+    displayName += ` (${territoryName}, ${scriptName})`;
   } else if (scriptName) {
     displayName += ` (${scriptName})`;
   } else if (territoryName) {
@@ -247,8 +232,16 @@ function getCachedLocaleList(ignoreExpiry: boolean = false): CLDRLocale[] | null
   try {
     const cached = localStorage.getItem(CACHE_KEYS.LOCALE_LIST);
     const timestamp = localStorage.getItem(CACHE_KEYS.LOCALE_LIST_TIMESTAMP);
+    const cachedVersion = localStorage.getItem(CACHE_KEYS.CACHE_VERSION);
 
     if (!cached || !timestamp) {
+      return null;
+    }
+
+    // Check if cache version matches
+    if (cachedVersion !== String(CACHE_VERSION)) {
+      console.log('Cache version mismatch - clearing cache');
+      clearLocaleCache();
       return null;
     }
 
@@ -274,6 +267,7 @@ function cacheLocaleList(locales: CLDRLocale[]): void {
   try {
     localStorage.setItem(CACHE_KEYS.LOCALE_LIST, JSON.stringify(locales));
     localStorage.setItem(CACHE_KEYS.LOCALE_LIST_TIMESTAMP, Date.now().toString());
+    localStorage.setItem(CACHE_KEYS.CACHE_VERSION, String(CACHE_VERSION));
   } catch (error) {
     console.error('Error caching locale list:', error);
   }
@@ -285,6 +279,7 @@ function cacheLocaleList(locales: CLDRLocale[]): void {
 export function clearLocaleCache(): void {
   localStorage.removeItem(CACHE_KEYS.LOCALE_LIST);
   localStorage.removeItem(CACHE_KEYS.LOCALE_LIST_TIMESTAMP);
+  localStorage.removeItem(CACHE_KEYS.CACHE_VERSION);
 }
 
 /**
