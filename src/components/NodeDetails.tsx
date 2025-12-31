@@ -8,7 +8,6 @@ import {
   getNodeTypeLabel,
   formatTextContent,
   formatAttributesForTable,
-  getNodeStats,
   formatPath,
 } from '../utils/xmlFormatter';
 
@@ -17,7 +16,6 @@ interface NodeDetailsProps {
 }
 
 export function NodeDetails({ node }: NodeDetailsProps) {
-  const stats = getNodeStats(node);
   const attributes = formatAttributesForTable(node.attributes);
 
   // Get icon for node type
@@ -35,6 +33,7 @@ export function NodeDetails({ node }: NodeDetailsProps) {
   };
 
   const TypeIcon = getTypeIcon();
+  const isLeaf = !node.children || node.children.length === 0;
 
   return (
     <div className="space-y-6">
@@ -45,11 +44,11 @@ export function NodeDetails({ node }: NodeDetailsProps) {
             <TypeIcon className="w-6 h-6 text-blue-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-semibold text-gray-900 break-words">
+            <h3 className={`text-xl font-semibold break-words ${isLeaf ? 'text-blue-700 text-2xl' : 'text-gray-900'}`}>
               {node.name}
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              {getNodeTypeLabel(node.type)}
+              {isLeaf ? 'Leaf Element' : getNodeTypeLabel(node.type)}
             </p>
           </div>
         </div>
@@ -115,51 +114,20 @@ export function NodeDetails({ node }: NodeDetailsProps) {
         </div>
       )}
 
-      {/* Text Content */}
+      {/* Value */}
       {node.textContent && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <FileText className="w-4 h-4" />
-            <span>Text Content</span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <FileText className="w-5 h-5 text-blue-600" />
+            <span className="text-base">Value</span>
           </div>
-          <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <pre className="text-sm text-gray-900 whitespace-pre-wrap break-words font-mono">
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-4">
+            <pre className="text-base text-blue-900 font-semibold whitespace-pre-wrap break-words font-mono">
               {formatTextContent(node.textContent)}
             </pre>
           </div>
         </div>
       )}
-
-      {/* Statistics */}
-      <div className="space-y-2">
-        <div className="text-sm font-medium text-gray-700">Statistics</div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-blue-50 rounded-lg px-4 py-3">
-            <div className="text-xs text-blue-600 font-medium">Children</div>
-            <div className="text-2xl font-semibold text-blue-900 mt-1">
-              {stats.childCount}
-            </div>
-          </div>
-          <div className="bg-purple-50 rounded-lg px-4 py-3">
-            <div className="text-xs text-purple-600 font-medium">Attributes</div>
-            <div className="text-2xl font-semibold text-purple-900 mt-1">
-              {stats.attributeCount}
-            </div>
-          </div>
-          <div className="bg-green-50 rounded-lg px-4 py-3">
-            <div className="text-xs text-green-600 font-medium">Depth</div>
-            <div className="text-2xl font-semibold text-green-900 mt-1">
-              {stats.depth}
-            </div>
-          </div>
-          <div className="bg-orange-50 rounded-lg px-4 py-3">
-            <div className="text-xs text-orange-600 font-medium">Total Nodes</div>
-            <div className="text-2xl font-semibold text-orange-900 mt-1">
-              {stats.totalNodes}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Node ID (for debugging) */}
       <div className="pt-4 border-t border-gray-200">

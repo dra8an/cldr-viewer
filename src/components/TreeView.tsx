@@ -27,20 +27,63 @@ function getNodeIcon(node: XMLNode) {
 }
 
 /**
- * Format node as XML opening tag
+ * Format node as XML opening tag with color-coded parts
  */
-function formatXMLTag(xmlNode: XMLNode): string {
+function formatXMLTag(xmlNode: XMLNode, isLeaf: boolean): JSX.Element {
   const nodeName = xmlNode.name;
+  const hasAttributes = xmlNode.attributes && Object.keys(xmlNode.attributes).length > 0;
 
-  if (!xmlNode.attributes || Object.keys(xmlNode.attributes).length === 0) {
-    return `<${nodeName}>`;
+  // For leaf elements, don't show < > tags
+  if (isLeaf) {
+    if (!hasAttributes) {
+      return <span className="text-blue-600">{nodeName}</span>;
+    }
+
+    return (
+      <>
+        <span className="text-blue-600">{nodeName}</span>
+        {' '}
+        {Object.entries(xmlNode.attributes!).map(([key, value], index) => (
+          <span key={key}>
+            {index > 0 && ' '}
+            <span className="text-teal-600">{key}</span>
+            <span className="text-teal-600">="</span>
+            <span className="text-teal-600">{value}</span>
+            <span className="text-teal-600">"</span>
+          </span>
+        ))}
+      </>
+    );
   }
 
-  const attributesStr = Object.entries(xmlNode.attributes)
-    .map(([key, value]) => `${key}="${value}"`)
-    .join(' ');
+  // For non-leaf elements, show with < > tags
+  if (!hasAttributes) {
+    return (
+      <>
+        <span className="text-gray-500">&lt;</span>
+        <span className="text-blue-600">{nodeName}</span>
+        <span className="text-gray-500">&gt;</span>
+      </>
+    );
+  }
 
-  return `<${nodeName} ${attributesStr}>`;
+  return (
+    <>
+      <span className="text-gray-500">&lt;</span>
+      <span className="text-blue-600">{nodeName}</span>
+      {' '}
+      {Object.entries(xmlNode.attributes!).map(([key, value], index) => (
+        <span key={key}>
+          {index > 0 && ' '}
+          <span className="text-teal-600">{key}</span>
+          <span className="text-teal-600">="</span>
+          <span className="text-teal-600">{value}</span>
+          <span className="text-teal-600">"</span>
+        </span>
+      ))}
+      <span className="text-gray-500">&gt;</span>
+    </>
+  );
 }
 
 /**
@@ -51,7 +94,7 @@ function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<XMLNode>) {
   const xmlNode = node.data;
   const Icon = getNodeIcon(xmlNode);
   const isSelected = selectedNode?.id === xmlNode.id;
-  const xmlTag = formatXMLTag(xmlNode);
+  const xmlTag = formatXMLTag(xmlNode, node.isLeaf);
 
   const handleClick = () => {
     selectNode(xmlNode);
@@ -91,7 +134,7 @@ function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<XMLNode>) {
       <Icon className="w-4 h-4 flex-shrink-0 text-gray-500" />
 
       {/* XML Tag */}
-      <span className="text-sm truncate flex-1 min-w-0 font-mono text-gray-700 dark:text-gray-300">
+      <span className="text-sm truncate flex-1 min-w-0 font-mono">
         {xmlTag}
       </span>
     </div>
