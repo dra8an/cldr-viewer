@@ -81,6 +81,12 @@ export interface XMLContextActions {
   /** Select a node in the tree */
   selectNode: (node: XMLNode | null) => void;
 
+  /** Navigate to and expand a node by name */
+  navigateToNode: (nodeName: string) => void;
+
+  /** Register navigation callback from TreePanel */
+  registerNavigationCallback: (callback: (nodeName: string) => void) => void;
+
   /** Clear all XML data and reset state */
   clearXML: () => void;
 }

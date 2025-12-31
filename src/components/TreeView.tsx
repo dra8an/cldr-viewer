@@ -3,8 +3,9 @@
  */
 
 import type { MouseEvent } from 'react';
+import { useEffect, useRef } from 'react';
 import { Tree } from 'react-arborist';
-import type { NodeRendererProps } from 'react-arborist';
+import type { NodeRendererProps, TreeApi } from 'react-arborist';
 import { ChevronRight, ChevronDown, FileText, MessageSquare, Code } from 'lucide-react';
 import { useXML } from '../context/XMLContext';
 import type { XMLNode } from '../types/xml.types';
@@ -153,7 +154,81 @@ interface TreeViewProps {
  * TreeView Component
  */
 export function TreeView({ height = 600 }: TreeViewProps) {
-  const { xmlData } = useXML();
+  const { xmlData, registerNavigationCallback, selectNode } = useXML();
+  const treeApiRef = useRef<TreeApi<XMLNode> | null>(null);
+
+  // Register navigation callback
+  useEffect(() => {
+    const navigateToNode = (nodeName: string) => {
+      if (!treeApiRef.current) return;
+
+      // Find the node with the given name
+      const findNode = (nodes: XMLNode[], name: string): XMLNode | null => {
+        for (const node of nodes) {
+          if (node.name === name) {
+            return node;
+          }
+          if (node.children) {
+            const found = findNode(node.children, name);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      if (!xmlData) return;
+
+      let searchNodes: XMLNode[] = [xmlData];
+
+      // Apply the same filtering as tree data
+      if (xmlData.name === 'root' && xmlData.children) {
+        searchNodes = xmlData.children;
+      }
+      if (searchNodes.length === 1 && searchNodes[0].name === 'ldml' && searchNodes[0].children) {
+        searchNodes = searchNodes[0].children;
+      }
+      searchNodes = searchNodes.filter(node => node.name !== 'identity');
+
+      const targetNode = findNode(searchNodes, nodeName);
+      if (targetNode) {
+        // Open the node
+        treeApiRef.current.open(targetNode.id);
+
+        // Select the node
+        selectNode(targetNode);
+
+        // Wait for the tree to render, then scroll
+        setTimeout(() => {
+          if (treeApiRef.current) {
+            // Use the built-in scrollTo to get the node into view
+            treeApiRef.current.scrollTo(targetNode.id);
+
+            // Then find the scrollable container and adjust position to top
+            setTimeout(() => {
+              // Find the scrollable element - it's typically a div with overflow
+              const treeElement = document.querySelector('[role="tree"]');
+              if (treeElement) {
+                const scrollContainer = treeElement.querySelector('div[style*="overflow"]') as HTMLElement;
+                if (scrollContainer) {
+                  // Find the selected node element
+                  const selectedNode = scrollContainer.querySelector('.bg-blue-100');
+                  if (selectedNode) {
+                    const nodeRect = selectedNode.getBoundingClientRect();
+                    const containerRect = scrollContainer.getBoundingClientRect();
+                    const currentOffset = nodeRect.top - containerRect.top;
+                    // Adjust scroll to place node at top (with small padding)
+                    scrollContainer.scrollTop += currentOffset - 10;
+                  }
+                }
+              }
+            }, 100);
+          }
+        }, 200);
+      }
+    };
+
+    registerNavigationCallback(navigateToNode);
+  }, [xmlData, registerNavigationCallback, selectNode]);
 
   if (!xmlData) {
     return (
@@ -182,6 +257,9 @@ export function TreeView({ height = 600 }: TreeViewProps) {
   return (
     <div className="h-full">
       <Tree<XMLNode>
+        ref={(tree) => {
+          treeApiRef.current = tree;
+        }}
         data={treeData}
         openByDefault={false}
         width="100%"

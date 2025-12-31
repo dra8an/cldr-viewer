@@ -5,10 +5,14 @@
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { TreePanel } from './TreePanel';
 import { DetailPanel } from './DetailPanel';
+import { CLDRMetadataPanel } from './CLDRMetadataPanel';
 
 export function XMLViewer() {
   return (
     <div className="h-screen flex flex-col">
+      {/* Metadata Panel */}
+      <CLDRMetadataPanel />
+
       {/* Split Panel Container */}
       <div className="flex-1 overflow-hidden">
         <Group orientation="horizontal">

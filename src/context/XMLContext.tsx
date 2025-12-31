@@ -2,7 +2,7 @@
  * XML Context for managing application state
  */
 
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { XMLNode, XMLContextValue } from '../types/xml.types';
 import { parseXMLString } from '../utils/xmlParser';
@@ -29,6 +29,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigationCallbackRef = useRef<((nodeName: string) => void) | null>(null);
 
   /**
    * Load and parse an XML file
@@ -125,6 +126,22 @@ export function XMLProvider({ children }: XMLProviderProps) {
   }, []);
 
   /**
+   * Navigate to a node by name (called by external components)
+   */
+  const navigateToNode = useCallback((nodeName: string) => {
+    if (navigationCallbackRef.current) {
+      navigationCallbackRef.current(nodeName);
+    }
+  }, []);
+
+  /**
+   * Register navigation callback (called by TreePanel)
+   */
+  const registerNavigationCallback = useCallback((callback: (nodeName: string) => void) => {
+    navigationCallbackRef.current = callback;
+  }, []);
+
+  /**
    * Clear all XML data and reset state
    */
   const clearXML = useCallback(() => {
@@ -168,6 +185,8 @@ export function XMLProvider({ children }: XMLProviderProps) {
     loadXMLFile,
     loadFromURL,
     selectNode,
+    navigateToNode,
+    registerNavigationCallback,
     clearXML,
   };
 
