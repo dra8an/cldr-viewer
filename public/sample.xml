@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library name="City Public Library" established="1995">
+  <!-- Main catalog of books and media -->
+  <catalog>
+    <section id="fiction" type="books">
+      <book isbn="978-0-123456-78-9" available="true">
+        <title>The Great Adventure</title>
+        <author>John Smith</author>
+        <publisher>Acme Publishing</publisher>
+        <year>2020</year>
+        <genre>Fiction</genre>
+        <description>An epic tale of discovery and courage in uncharted lands.</description>
+        <price currency="USD">24.99</price>
+      </book>
+      <book isbn="978-0-987654-32-1" available="false">
+        <title>Mystery of the Old House</title>
+        <author>Jane Doe</author>
+        <publisher>Mystery Press</publisher>
+        <year>2018</year>
+        <genre>Mystery</genre>
+        <description>A thrilling mystery set in a Victorian mansion.</description>
+        <price currency="USD">19.99</price>
+      </book>
+    </section>
+
+    <section id="non-fiction" type="books">
+      <book isbn="978-0-555555-55-5" available="true">
+        <title>Learning TypeScript</title>
+        <author>Tech Writer</author>
+        <publisher>Dev Books Inc</publisher>
+        <year>2023</year>
+        <genre>Programming</genre>
+        <description><![CDATA[A comprehensive guide to TypeScript with real-world examples & best practices.]]></description>
+        <price currency="USD">45.00</price>
+      </book>
+    </section>
+
+    <section id="media" type="dvd">
+      <dvd barcode="123-456-789" available="true">
+        <title>Documentary: Nature's Wonders</title>
+        <director>Alice Johnson</director>
+        <runtime>120</runtime>
+        <rating>G</rating>
+      </dvd>
+    </section>
+  </catalog>
+
+  <!-- Member information -->
+  <members>
+    <member id="M001" status="active">
+      <name>Robert Brown</name>
+      <email>robert@example.com</email>
+      <joined>2019-03-15</joined>
+      <borrowedItems>
+        <item isbn="978-0-123456-78-9" dueDate="2024-01-15"/>
+      </borrowedItems>
+    </member>
+    <member id="M002" status="active">
+      <name>Sarah Wilson</name>
+      <email>sarah@example.com</email>
+      <joined>2021-07-22</joined>
+      <borrowedItems/>
+    </member>
+  </members>
+</library>
