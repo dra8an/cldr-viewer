@@ -120,8 +120,21 @@ export function TreeView({ height = 600 }: TreeViewProps) {
     );
   }
 
-  // Pass XMLNode data directly to react-arborist
-  const treeData = [xmlData];
+  // Skip root and ldml levels for CLDR files
+  let treeData: XMLNode[] = [xmlData];
+
+  // If root node, get its children
+  if (xmlData.name === 'root' && xmlData.children) {
+    treeData = xmlData.children;
+  }
+
+  // If first node is ldml, show its children instead
+  if (treeData.length === 1 && treeData[0].name === 'ldml' && treeData[0].children) {
+    treeData = treeData[0].children;
+  }
+
+  // Filter out identity element
+  treeData = treeData.filter(node => node.name !== 'identity');
 
   return (
     <div className="h-full">
