@@ -57,3 +57,6 @@ lerna-debug.log*
 
 # Optional eslint cache
 .eslintcache
+
+# Claude Code local settings
+.claude/settings.local.json
