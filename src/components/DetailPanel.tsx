@@ -4,7 +4,7 @@
 
 import { Info } from 'lucide-react';
 import { useXML } from '../context/XMLContext';
-import { NodeDetails } from './NodeDetails';
+import { CLDRNodeDetails } from './CLDRNodeDetails';
 
 export function DetailPanel() {
   const { selectedNode } = useXML();
@@ -25,7 +25,7 @@ export function DetailPanel() {
       <div className="flex-1 overflow-auto">
         {selectedNode ? (
           <div className="p-6">
-            <NodeDetails node={selectedNode} />
+            <CLDRNodeDetails node={selectedNode} />
           </div>
         ) : (
           <div className="flex items-center justify-center h-full px-6">
