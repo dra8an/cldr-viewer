@@ -45,6 +45,30 @@ export function CLDRNodeDetails({ node }: CLDRNodeDetailsProps) {
       {/* Base Node Details */}
       <NodeDetails node={node} />
 
+      {/* Value Preview */}
+      {preview && preview.examples && preview.examples.length > 0 && (
+        <div className="border-t border-gray-200 pt-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Eye className="w-4 h-4 text-purple-600" />
+              <span>Preview Examples</span>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 space-y-2">
+              {preview.examples.map((example: string, index: number) => (
+                <div key={index} className="text-sm font-mono text-purple-900">
+                  {example}
+                </div>
+              ))}
+              {preview.explanation && (
+                <p className="text-xs text-purple-700 pt-2 border-t border-purple-200">
+                  {preview.explanation}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CLDR Context */}
       {context && (
         <div className="border-t border-gray-200 pt-6">
@@ -93,30 +117,6 @@ export function CLDRNodeDetails({ node }: CLDRNodeDetailsProps) {
                 </a>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Value Preview */}
-      {preview && preview.examples.length > 0 && (
-        <div className="border-t border-gray-200 pt-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Eye className="w-4 h-4 text-purple-600" />
-              <span>Preview Examples</span>
-            </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 space-y-2">
-              {preview.examples.map((example, index) => (
-                <div key={index} className="text-sm font-mono text-purple-900">
-                  {example}
-                </div>
-              ))}
-              {preview.explanation && (
-                <p className="text-xs text-purple-700 pt-2 border-t border-purple-200">
-                  {preview.explanation}
-                </p>
-              )}
-            </div>
           </div>
         </div>
       )}

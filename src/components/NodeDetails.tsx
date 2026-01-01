@@ -47,21 +47,7 @@ export function NodeDetails({ node }: NodeDetailsProps) {
             <h3 className={`text-xl font-semibold break-words ${isLeaf ? 'text-blue-700 text-2xl' : 'text-gray-900'}`}>
               {node.name}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              {isLeaf ? 'Leaf Element' : getNodeTypeLabel(node.type)}
-            </p>
           </div>
-        </div>
-      </div>
-
-      {/* Node Type */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          <Type className="w-4 h-4" />
-          <span>Type</span>
-        </div>
-        <div className="bg-gray-50 rounded-lg px-4 py-3">
-          <code className="text-sm text-gray-900">{node.type}</code>
         </div>
       </div>
 
@@ -78,42 +64,6 @@ export function NodeDetails({ node }: NodeDetailsProps) {
         </div>
       </div>
 
-      {/* Attributes */}
-      {attributes.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <List className="w-4 h-4" />
-            <span>Attributes ({attributes.length})</span>
-          </div>
-          <div className="bg-gray-50 rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Value
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {attributes.map(({ key, value }) => (
-                  <tr key={key} className="hover:bg-gray-100">
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                      {key}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-700 break-all">
-                      {value}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* Value */}
       {node.textContent && (
         <div className="space-y-2">
@@ -128,13 +78,6 @@ export function NodeDetails({ node }: NodeDetailsProps) {
           </div>
         </div>
       )}
-
-      {/* Node ID (for debugging) */}
-      <div className="pt-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500">
-          <span className="font-medium">Node ID:</span> {node.id}
-        </div>
-      </div>
     </div>
   );
 }

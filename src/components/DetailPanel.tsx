@@ -11,16 +11,6 @@ export function DetailPanel() {
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Info className="w-5 h-5 text-gray-600 flex-shrink-0" />
-          <h2 className="text-sm font-semibold text-gray-900">
-            {selectedNode ? 'Node Details' : 'Details'}
-          </h2>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {selectedNode ? (

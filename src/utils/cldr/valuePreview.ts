@@ -17,11 +17,18 @@ export function generateValuePreview(node: XMLNode): PreviewResult | null {
   const name = node.name?.toLowerCase();
   const value = node.textContent?.trim();
 
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
   // Date/Time Patterns
   if ((name === 'pattern' || name === 'dateformatitem') && path.includes('/dates/')) {
     return generateDatePatternPreview(value);
+  }
+
+  // Date/Time Skeletons
+  if (name === 'datetimeskeleton' && path.includes('/dates/')) {
+    return generateDateSkeletonPreview(value);
   }
 
   // Number Patterns
@@ -139,48 +146,81 @@ export function generateValuePreview(node: XMLNode): PreviewResult | null {
  * Generate preview for date/time patterns
  */
 function generateDatePatternPreview(pattern: string): PreviewResult {
-  const now = new Date('2024-01-15T14:30:00'); // Monday, January 15, 2024, 2:30 PM
-
   try {
-    // Simple pattern replacement for common date/time symbols
+    // Check if this is a datetime combining pattern (contains {0} and {1})
+    if (pattern.includes('{0}') && pattern.includes('{1}')) {
+      // {1} = date part, {0} = time part
+      const exampleDate = 'January 15, 2024';
+      const exampleTime = '2:30 PM';
+      const combined = pattern.replace('{1}', exampleDate).replace('{0}', exampleTime);
+
+      return {
+        examples: [combined],
+        explanation: 'Combined date and time pattern ({1} = date, {0} = time)'
+      };
+    }
+
+    // Use placeholder-based replacement to avoid conflicts
+    // Step 1: Replace pattern symbols with unique placeholders
     let preview = pattern;
 
-    // Year
-    preview = preview.replace(/yyyy/g, '2024');
-    preview = preview.replace(/yy/g, '24');
+    const replacements: Array<[RegExp, string]> = [
+      // Longest patterns first
+      [/EEEE/g, '{{DAYNAME_FULL}}'],
+      [/EEE/g, '{{DAYNAME_SHORT}}'],
+      [/MMMM/g, '{{MONTH_FULL}}'],
+      [/MMM/g, '{{MONTH_SHORT}}'],
+      [/yyyy/g, '{{YEAR_FULL}}'],
+      [/yy/g, '{{YEAR_SHORT}}'],
+      [/MM/g, '{{MONTH_NUM2}}'],
+      [/dd/g, '{{DAY_NUM2}}'],
+      [/HH/g, '{{HOUR24_2}}'],
+      [/hh/g, '{{HOUR12_2}}'],
+      [/mm/g, '{{MINUTE_2}}'],
+      [/ss/g, '{{SECOND_2}}'],
+      // Single letter patterns (less common, only if not already replaced)
+      [/(?<![A-Za-z])y(?![A-Za-z])/g, '{{YEAR}}'],
+      [/(?<![A-Za-z])M(?![A-Za-z])/g, '{{MONTH}}'],
+      [/(?<![A-Za-z])d(?![A-Za-z])/g, '{{DAY}}'],
+      [/(?<![A-Za-z])H(?![A-Za-z])/g, '{{HOUR24}}'],
+      [/(?<![A-Za-z])h(?![A-Za-z])/g, '{{HOUR12}}'],
+      [/(?<![A-Za-z])m(?![A-Za-z])/g, '{{MINUTE}}'],
+      [/(?<![A-Za-z])s(?![A-Za-z])/g, '{{SECOND}}'],
+      [/(?<![A-Za-z])a(?![A-Za-z])/g, '{{AMPM}}'],
+    ];
 
-    // Month
-    preview = preview.replace(/MMMM/g, 'January');
-    preview = preview.replace(/MMM/g, 'Jan');
-    preview = preview.replace(/MM/g, '01');
-    preview = preview.replace(/M/g, '1');
+    // Apply all pattern replacements
+    for (const [pattern, placeholder] of replacements) {
+      preview = preview.replace(pattern, placeholder);
+    }
 
-    // Day
-    preview = preview.replace(/dd/g, '15');
-    preview = preview.replace(/d/g, '15');
+    // Step 2: Replace placeholders with actual values
+    const values: Record<string, string> = {
+      '{{DAYNAME_FULL}}': 'Monday',
+      '{{DAYNAME_SHORT}}': 'Mon',
+      '{{MONTH_FULL}}': 'January',
+      '{{MONTH_SHORT}}': 'Jan',
+      '{{MONTH_NUM2}}': '01',
+      '{{MONTH}}': '1',
+      '{{YEAR_FULL}}': '2024',
+      '{{YEAR_SHORT}}': '24',
+      '{{YEAR}}': '2024',
+      '{{DAY_NUM2}}': '15',
+      '{{DAY}}': '15',
+      '{{HOUR24_2}}': '14',
+      '{{HOUR24}}': '14',
+      '{{HOUR12_2}}': '02',
+      '{{HOUR12}}': '2',
+      '{{MINUTE_2}}': '30',
+      '{{MINUTE}}': '30',
+      '{{SECOND_2}}': '00',
+      '{{SECOND}}': '0',
+      '{{AMPM}}': 'PM',
+    };
 
-    // Day of week
-    preview = preview.replace(/EEEE/g, 'Monday');
-    preview = preview.replace(/EEE/g, 'Mon');
-    preview = preview.replace(/EE/g, 'Mon');
-    preview = preview.replace(/E/g, 'Mon');
-
-    // Hour
-    preview = preview.replace(/HH/g, '14');
-    preview = preview.replace(/H/g, '14');
-    preview = preview.replace(/hh/g, '02');
-    preview = preview.replace(/h/g, '2');
-
-    // Minute
-    preview = preview.replace(/mm/g, '30');
-    preview = preview.replace(/m/g, '30');
-
-    // Second
-    preview = preview.replace(/ss/g, '00');
-    preview = preview.replace(/s/g, '0');
-
-    // AM/PM
-    preview = preview.replace(/a/g, 'PM');
+    for (const [placeholder, value] of Object.entries(values)) {
+      preview = preview.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+    }
 
     return {
       examples: [preview],
@@ -192,6 +232,51 @@ function generateDatePatternPreview(pattern: string): PreviewResult {
       explanation: 'Unable to preview this pattern'
     };
   }
+}
+
+/**
+ * Generate preview for date/time skeletons
+ */
+function generateDateSkeletonPreview(skeleton: string): PreviewResult {
+  // Skeletons are simplified pattern formats like "yMMMd", "yMd", "Hms", etc.
+  // Convert to readable examples
+  const examples: string[] = [];
+
+  // Check what components are in the skeleton
+  const hasYear = /y/.test(skeleton);
+  const hasMonth = /M/.test(skeleton);
+  const hasDay = /d/.test(skeleton);
+  const hasWeekday = /E/.test(skeleton);
+  const hasHour = /[Hh]/.test(skeleton);
+  const hasMinute = /m/.test(skeleton);
+  const hasSecond = /s/.test(skeleton);
+
+  // Build example based on components
+  if (hasYear && hasMonth && hasDay && hasWeekday) {
+    examples.push('Monday, January 15, 2024');
+  } else if (hasYear && hasMonth && hasDay) {
+    examples.push('January 15, 2024');
+  } else if (hasMonth && hasDay) {
+    examples.push('January 15');
+  } else if (hasYear && hasMonth) {
+    examples.push('January 2024');
+  }
+
+  if (hasHour && hasMinute && hasSecond) {
+    examples.push('2:30:00 PM');
+  } else if (hasHour && hasMinute) {
+    examples.push('2:30 PM');
+  }
+
+  // If no examples were generated, show the skeleton itself
+  if (examples.length === 0) {
+    examples.push(`Skeleton format: ${skeleton}`);
+  }
+
+  return {
+    examples,
+    explanation: 'Date/time skeleton pattern (flexible format)'
+  };
 }
 
 /**
