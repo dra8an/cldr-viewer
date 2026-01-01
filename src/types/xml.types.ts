@@ -72,6 +72,12 @@ export interface XMLContextState {
 
   /** Map of node modifications (nodeId -> modification) */
   modifications: Map<string, NodeModification>;
+
+  /** Undo stack */
+  undoStack: UndoAction[];
+
+  /** Redo stack */
+  redoStack: UndoAction[];
 }
 
 /**
@@ -110,6 +116,21 @@ export interface XMLContextActions {
 
   /** Discard all modifications */
   discardAllModifications: () => void;
+
+  /** Revert a specific modification */
+  revertModification: (nodeId: string) => void;
+
+  /** Undo last action */
+  undo: () => void;
+
+  /** Redo last undone action */
+  redo: () => void;
+
+  /** Check if undo is available */
+  canUndo: boolean;
+
+  /** Check if redo is available */
+  canRedo: boolean;
 }
 
 /**
@@ -133,6 +154,32 @@ export interface NodeModification {
 
   /** Attribute name (if type is 'attribute') */
   attributeName?: string;
+
+  /** Node path for display */
+  path?: string;
+
+  /** Node name for display */
+  nodeName?: string;
+}
+
+/**
+ * Represents an action in the undo/redo stack
+ */
+export interface UndoAction {
+  /** Action type */
+  type: 'modify' | 'revert';
+
+  /** Node ID affected */
+  nodeId: string;
+
+  /** Previous value */
+  previousValue: string;
+
+  /** New value */
+  newValue: string;
+
+  /** Timestamp */
+  timestamp: Date;
 }
 
 /**

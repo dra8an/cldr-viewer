@@ -2,15 +2,41 @@
  * Main Application Component
  */
 
-import { Globe, X, Eye, Edit3, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Globe, X, Eye, Edit3, AlertTriangle, Undo2, Redo2, ListTree } from 'lucide-react';
 import { useXML } from './context/XMLContext';
 import { FileUploader } from './components/FileUploader';
 import { XMLViewer } from './components/XMLViewer';
 import { LocaleSelector } from './components/LocaleSelector';
+import { ChangesPanel } from './components/ChangesPanel';
 
 function App() {
-  const { xmlData, fileName, editMode, modifications, clearXML, toggleEditMode } = useXML();
+  const { xmlData, fileName, editMode, modifications, clearXML, toggleEditMode, undo, redo, canUndo, canRedo } = useXML();
   const modificationCount = modifications.size;
+  const [showChangesPanel, setShowChangesPanel] = useState(false);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd/Ctrl key
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Undo: Cmd/Ctrl + Z
+      if (isMod && e.key === 'z' && !e.shiftKey && editMode && canUndo) {
+        e.preventDefault();
+        undo();
+      }
+
+      // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
+      if (isMod && ((e.key === 'z' && e.shiftKey) || e.key === 'y') && editMode && canRedo) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editMode, canUndo, canRedo, undo, redo]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,6 +64,53 @@ function App() {
 
             {xmlData && (
               <>
+                {/* Undo/Redo Buttons (only show in edit mode) */}
+                {editMode && (
+                  <div className="flex items-center gap-1 border-r border-gray-200 pr-4">
+                    <button
+                      onClick={undo}
+                      disabled={!canUndo}
+                      aria-label="Undo last change"
+                      className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors ${
+                        canUndo
+                          ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                          : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                      }`}
+                    >
+                      <Undo2 className="w-4 h-4" />
+                      Undo
+                    </button>
+                    <button
+                      onClick={redo}
+                      disabled={!canRedo}
+                      aria-label="Redo last undone change"
+                      className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors ${
+                        canRedo
+                          ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                          : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                      }`}
+                    >
+                      <Redo2 className="w-4 h-4" />
+                      Redo
+                    </button>
+                  </div>
+                )}
+
+                {/* Changes Panel Toggle (only show in edit mode with modifications) */}
+                {editMode && modificationCount > 0 && (
+                  <button
+                    onClick={() => setShowChangesPanel(!showChangesPanel)}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
+                      showChangesPanel
+                        ? 'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-blue-500'
+                    }`}
+                  >
+                    <ListTree className="w-4 h-4" />
+                    Changes
+                  </button>
+                )}
+
                 {/* Edit Mode Toggle */}
                 <button
                   onClick={toggleEditMode}
@@ -106,7 +179,19 @@ function App() {
           <FileUploader />
         </div>
       ) : (
-        <XMLViewer />
+        <div className="flex-1 flex overflow-hidden">
+          {/* Main Viewer */}
+          <div className={`flex-1 ${showChangesPanel ? 'border-r border-gray-200' : ''}`}>
+            <XMLViewer />
+          </div>
+
+          {/* Changes Panel (Sidebar) */}
+          {showChangesPanel && (
+            <div className="w-96 border-l border-gray-200">
+              <ChangesPanel />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

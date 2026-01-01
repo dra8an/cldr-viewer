@@ -4,7 +4,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { XMLNode, XMLContextValue, NodeModification } from '../types/xml.types';
+import type { XMLNode, XMLContextValue, NodeModification, UndoAction } from '../types/xml.types';
 import { parseXMLString } from '../utils/xmlParser';
 import { fetchLocaleById } from '../services/cldrService';
 
@@ -31,6 +31,8 @@ export function XMLProvider({ children }: XMLProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [modifications, setModifications] = useState<Map<string, NodeModification>>(new Map());
+  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+  const [redoStack, setRedoStack] = useState<UndoAction[]>([]);
   const navigationCallbackRef = useRef<((nodeName: string) => void) | null>(null);
 
   /**
@@ -65,6 +67,8 @@ export function XMLProvider({ children }: XMLProviderProps) {
       setFileName(file.name);
       setSelectedNode(null); // Clear selection when loading new file
       setModifications(new Map()); // Clear modifications when loading new file
+      setUndoStack([]); // Clear undo stack
+      setRedoStack([]); // Clear redo stack
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -110,6 +114,8 @@ export function XMLProvider({ children }: XMLProviderProps) {
       setFileName(fileName || url.split('/').pop() || 'remote.xml');
       setSelectedNode(null); // Clear selection when loading new file
       setModifications(new Map()); // Clear modifications when loading new file
+      setUndoStack([]); // Clear undo stack
+      setRedoStack([]); // Clear redo stack
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -156,6 +162,8 @@ export function XMLProvider({ children }: XMLProviderProps) {
     setIsLoading(false);
     setEditMode(false); // Reset edit mode when clearing
     setModifications(new Map()); // Clear modifications when clearing
+    setUndoStack([]); // Clear undo stack
+    setRedoStack([]); // Clear redo stack
   }, []);
 
   /**
@@ -189,7 +197,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
   const updateNodeText = useCallback((nodeId: string, newValue: string) => {
     if (!xmlData) return;
 
-    // Find the node to get original value
+    // Find the node to get current and original values
     const findNode = (node: XMLNode): XMLNode | null => {
       if (node.id === nodeId) return node;
       if (node.children) {
@@ -204,7 +212,25 @@ export function XMLProvider({ children }: XMLProviderProps) {
     const targetNode = findNode(xmlData);
     if (!targetNode) return;
 
-    const originalValue = targetNode.textContent || '';
+    const currentValue = targetNode.textContent || '';
+
+    // Don't update if value hasn't changed
+    if (currentValue === newValue) return;
+
+    // Get the original value from modifications map, or use current if not modified
+    const existingModification = modifications.get(nodeId);
+    const originalValue = existingModification?.originalValue ?? currentValue;
+
+    // Add to undo stack
+    const undoAction: UndoAction = {
+      type: 'modify',
+      nodeId,
+      previousValue: currentValue,
+      newValue,
+      timestamp: new Date()
+    };
+    setUndoStack(prev => [...prev, undoAction]);
+    setRedoStack([]); // Clear redo stack on new action
 
     // Only track if value actually changed from original
     if (newValue !== originalValue) {
@@ -214,7 +240,9 @@ export function XMLProvider({ children }: XMLProviderProps) {
         originalValue,
         newValue,
         timestamp: new Date(),
-        type: 'textContent'
+        type: 'textContent',
+        path: targetNode.path,
+        nodeName: targetNode.name
       };
 
       // Update modifications map
@@ -240,7 +268,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
     if (selectedNode?.id === nodeId) {
       setSelectedNode({ ...selectedNode, textContent: newValue });
     }
-  }, [xmlData, selectedNode, updateNodeInTree]);
+  }, [xmlData, selectedNode, modifications, updateNodeInTree]);
 
   /**
    * Check if a node has been modified
@@ -260,9 +288,210 @@ export function XMLProvider({ children }: XMLProviderProps) {
    * Discard all modifications
    */
   const discardAllModifications = useCallback(() => {
+    if (!xmlData) return;
+
+    // Revert all modifications to their original values
+    modifications.forEach((mod) => {
+      const updatedTree = updateNodeInTree(xmlData, mod.nodeId, mod.originalValue);
+      setXmlData(updatedTree);
+
+      // Update selected node if needed
+      if (selectedNode?.id === mod.nodeId) {
+        setSelectedNode({ ...selectedNode, textContent: mod.originalValue });
+      }
+    });
+
+    // Clear all tracking
     setModifications(new Map());
-    // TODO: Reload original XML data to restore original values
-  }, []);
+    setUndoStack([]);
+    setRedoStack([]);
+  }, [xmlData, selectedNode, modifications, updateNodeInTree]);
+
+  /**
+   * Revert a specific modification to its original value
+   */
+  const revertModification = useCallback((nodeId: string) => {
+    if (!xmlData) return;
+
+    const modification = modifications.get(nodeId);
+    if (!modification) return;
+
+    const currentValue = (() => {
+      const findNode = (node: XMLNode): XMLNode | null => {
+        if (node.id === nodeId) return node;
+        if (node.children) {
+          for (const child of node.children) {
+            const found = findNode(child);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const node = findNode(xmlData);
+      return node?.textContent || '';
+    })();
+
+    // Add to undo stack
+    const undoAction: UndoAction = {
+      type: 'revert',
+      nodeId,
+      previousValue: currentValue,
+      newValue: modification.originalValue,
+      timestamp: new Date()
+    };
+    setUndoStack(prev => [...prev, undoAction]);
+    setRedoStack([]); // Clear redo stack
+
+    // Remove from modifications
+    setModifications(prev => {
+      const updated = new Map(prev);
+      updated.delete(nodeId);
+      return updated;
+    });
+
+    // Update the tree with original value
+    const updatedTree = updateNodeInTree(xmlData, nodeId, modification.originalValue);
+    setXmlData(updatedTree);
+
+    // Update selected node if needed
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode({ ...selectedNode, textContent: modification.originalValue });
+    }
+  }, [xmlData, selectedNode, modifications, updateNodeInTree]);
+
+  /**
+   * Undo last action
+   */
+  const undo = useCallback(() => {
+    if (!xmlData || undoStack.length === 0) return;
+
+    const lastAction = undoStack[undoStack.length - 1];
+
+    // Revert the change
+    const updatedTree = updateNodeInTree(xmlData, lastAction.nodeId, lastAction.previousValue);
+    setXmlData(updatedTree);
+
+    // Update selected node if needed
+    if (selectedNode?.id === lastAction.nodeId) {
+      setSelectedNode({ ...selectedNode, textContent: lastAction.previousValue });
+    }
+
+    // Update modifications map
+    const findNode = (node: XMLNode, nodeId: string): XMLNode | null => {
+      if (node.id === nodeId) return node;
+      if (node.children) {
+        for (const child of node.children) {
+          const found = findNode(child, nodeId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    setModifications(prev => {
+      const updated = new Map(prev);
+      const existingMod = updated.get(lastAction.nodeId);
+
+      if (existingMod) {
+        const originalValue = existingMod.originalValue;
+
+        // If reverting to original, remove from modifications
+        if (lastAction.previousValue === originalValue) {
+          updated.delete(lastAction.nodeId);
+        } else {
+          // Update the modification with the previous value
+          const targetNode = findNode(updatedTree, lastAction.nodeId);
+          updated.set(lastAction.nodeId, {
+            ...existingMod,
+            newValue: lastAction.previousValue,
+            timestamp: new Date(),
+            path: targetNode?.path,
+            nodeName: targetNode?.name
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    // Move action to redo stack
+    setUndoStack(prev => prev.slice(0, -1));
+    setRedoStack(prev => [...prev, lastAction]);
+  }, [xmlData, selectedNode, undoStack, updateNodeInTree]);
+
+  /**
+   * Redo last undone action
+   */
+  const redo = useCallback(() => {
+    if (!xmlData || redoStack.length === 0) return;
+
+    const lastUndone = redoStack[redoStack.length - 1];
+
+    // Re-apply the change
+    const updatedTree = updateNodeInTree(xmlData, lastUndone.nodeId, lastUndone.newValue);
+    setXmlData(updatedTree);
+
+    // Update selected node if needed
+    if (selectedNode?.id === lastUndone.nodeId) {
+      setSelectedNode({ ...selectedNode, textContent: lastUndone.newValue });
+    }
+
+    // Update modifications map
+    const findNode = (node: XMLNode, nodeId: string): XMLNode | null => {
+      if (node.id === nodeId) return node;
+      if (node.children) {
+        for (const child of node.children) {
+          const found = findNode(child, nodeId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    setModifications(prev => {
+      const updated = new Map(prev);
+      const existingMod = updated.get(lastUndone.nodeId);
+
+      if (existingMod) {
+        const originalValue = existingMod.originalValue;
+
+        // If new value equals original, remove from modifications
+        if (lastUndone.newValue === originalValue) {
+          updated.delete(lastUndone.nodeId);
+        } else {
+          // Update the modification with the new value
+          const targetNode = findNode(updatedTree, lastUndone.nodeId);
+          updated.set(lastUndone.nodeId, {
+            ...existingMod,
+            newValue: lastUndone.newValue,
+            timestamp: new Date(),
+            path: targetNode?.path,
+            nodeName: targetNode?.name
+          });
+        }
+      } else {
+        // Redoing might recreate a modification
+        const targetNode = findNode(updatedTree, lastUndone.nodeId);
+        if (targetNode) {
+          updated.set(lastUndone.nodeId, {
+            nodeId: lastUndone.nodeId,
+            originalValue: lastUndone.previousValue,
+            newValue: lastUndone.newValue,
+            timestamp: new Date(),
+            type: 'textContent',
+            path: targetNode.path,
+            nodeName: targetNode.name
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    // Move action back to undo stack
+    setRedoStack(prev => prev.slice(0, -1));
+    setUndoStack(prev => [...prev, lastUndone]);
+  }, [xmlData, selectedNode, redoStack, updateNodeInTree]);
 
   /**
    * Auto-load default locale (en.xml) on mount
@@ -295,6 +524,10 @@ export function XMLProvider({ children }: XMLProviderProps) {
     error,
     editMode,
     modifications,
+    undoStack,
+    redoStack,
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
     // Actions
     loadXMLFile,
     loadFromURL,
@@ -307,6 +540,9 @@ export function XMLProvider({ children }: XMLProviderProps) {
     isNodeModified,
     getNodeModification,
     discardAllModifications,
+    revertModification,
+    undo,
+    redo,
   };
 
   return <XMLContext.Provider value={value}>{children}</XMLContext.Provider>;
