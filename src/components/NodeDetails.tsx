@@ -10,12 +10,15 @@ import {
   formatAttributesForTable,
   formatPath,
 } from '../utils/xmlFormatter';
+import { useXML } from '../context/XMLContext';
+import { InlineTextEditor } from './InlineTextEditor';
 
 interface NodeDetailsProps {
   node: XMLNode;
 }
 
 export function NodeDetails({ node }: NodeDetailsProps) {
+  const { editMode, updateNodeText, isNodeModified } = useXML();
   const attributes = formatAttributesForTable(node.attributes);
 
   // Get icon for node type
@@ -34,6 +37,11 @@ export function NodeDetails({ node }: NodeDetailsProps) {
 
   const TypeIcon = getTypeIcon();
   const isLeaf = !node.children || node.children.length === 0;
+  const isModified = isNodeModified(node.id);
+
+  const handleSave = (newValue: string) => {
+    updateNodeText(node.id, newValue);
+  };
 
   return (
     <div className="space-y-6">
@@ -65,17 +73,24 @@ export function NodeDetails({ node }: NodeDetailsProps) {
       </div>
 
       {/* Value */}
-      {node.textContent && (
+      {node.textContent !== undefined && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
             <FileText className="w-5 h-5 text-blue-600" />
             <span className="text-base">Value</span>
+            {isModified && (
+              <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">
+                Modified
+              </span>
+            )}
           </div>
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-4">
-            <pre className="text-base text-blue-900 font-semibold whitespace-pre-wrap break-words font-mono">
-              {formatTextContent(node.textContent)}
-            </pre>
-          </div>
+          <InlineTextEditor
+            value={node.textContent}
+            onSave={handleSave}
+            isModified={isModified}
+            editMode={editMode}
+            placeholder="Enter value..."
+          />
         </div>
       )}
     </div>

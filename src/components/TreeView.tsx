@@ -146,10 +146,11 @@ function formatXMLTag(xmlNode: XMLNode, isLeaf: boolean): JSX.Element {
  * Custom node renderer
  */
 function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<XMLNode>) {
-  const { selectNode, selectedNode } = useXML();
+  const { selectNode, selectedNode, isNodeModified } = useXML();
   const xmlNode = node.data;
   const { icon: Icon, color: iconColor } = getNodeIcon(xmlNode);
   const isSelected = selectedNode?.id === xmlNode.id;
+  const isModified = isNodeModified(xmlNode.id);
   const xmlTag = formatXMLTag(xmlNode, node.isLeaf);
 
   const handleClick = () => {
@@ -193,6 +194,11 @@ function NodeRenderer({ node, style, dragHandle }: NodeRendererProps<XMLNode>) {
       <span className="text-sm truncate flex-1 min-w-0 font-mono">
         {xmlTag}
       </span>
+
+      {/* Modified Indicator */}
+      {isModified && (
+        <span className="flex-shrink-0 w-2 h-2 bg-amber-500 rounded-full" title="Modified" />
+      )}
     </div>
   );
 }

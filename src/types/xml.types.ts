@@ -69,6 +69,9 @@ export interface XMLContextState {
 
   /** Whether edit mode is enabled */
   editMode: boolean;
+
+  /** Map of node modifications (nodeId -> modification) */
+  modifications: Map<string, NodeModification>;
 }
 
 /**
@@ -95,6 +98,41 @@ export interface XMLContextActions {
 
   /** Toggle edit mode on/off */
   toggleEditMode: () => void;
+
+  /** Update node text content */
+  updateNodeText: (nodeId: string, newValue: string) => void;
+
+  /** Check if a node has been modified */
+  isNodeModified: (nodeId: string) => boolean;
+
+  /** Get modification for a node */
+  getNodeModification: (nodeId: string) => NodeModification | undefined;
+
+  /** Discard all modifications */
+  discardAllModifications: () => void;
+}
+
+/**
+ * Represents a modification to an XML node
+ */
+export interface NodeModification {
+  /** Node ID */
+  nodeId: string;
+
+  /** Original value before modification */
+  originalValue: string;
+
+  /** New modified value */
+  newValue: string;
+
+  /** Timestamp of modification */
+  timestamp: Date;
+
+  /** Type of modification */
+  type: 'textContent' | 'attribute';
+
+  /** Attribute name (if type is 'attribute') */
+  attributeName?: string;
 }
 
 /**

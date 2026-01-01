@@ -9,7 +9,8 @@ import { XMLViewer } from './components/XMLViewer';
 import { LocaleSelector } from './components/LocaleSelector';
 
 function App() {
-  const { xmlData, fileName, editMode, clearXML, toggleEditMode } = useXML();
+  const { xmlData, fileName, editMode, modifications, clearXML, toggleEditMode } = useXML();
+  const modificationCount = modifications.size;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,9 +82,16 @@ function App() {
           <div className="px-6 py-3 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-amber-900">
-                Edit Mode Active
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-amber-900">
+                  Edit Mode Active
+                </p>
+                {modificationCount > 0 && (
+                  <span className="px-2 py-0.5 bg-amber-200 text-amber-900 text-xs font-bold rounded-full">
+                    {modificationCount} {modificationCount === 1 ? 'change' : 'changes'}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-amber-700">
                 Changes are not automatically saved. You'll need to export the modified XML when ready.
               </p>

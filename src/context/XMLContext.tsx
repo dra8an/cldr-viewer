@@ -4,7 +4,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { XMLNode, XMLContextValue } from '../types/xml.types';
+import type { XMLNode, XMLContextValue, NodeModification } from '../types/xml.types';
 import { parseXMLString } from '../utils/xmlParser';
 import { fetchLocaleById } from '../services/cldrService';
 
@@ -30,6 +30,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [modifications, setModifications] = useState<Map<string, NodeModification>>(new Map());
   const navigationCallbackRef = useRef<((nodeName: string) => void) | null>(null);
 
   /**
@@ -63,6 +64,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
       setXmlData(result.data);
       setFileName(file.name);
       setSelectedNode(null); // Clear selection when loading new file
+      setModifications(new Map()); // Clear modifications when loading new file
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -107,6 +109,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
       setXmlData(result.data);
       setFileName(fileName || url.split('/').pop() || 'remote.xml');
       setSelectedNode(null); // Clear selection when loading new file
+      setModifications(new Map()); // Clear modifications when loading new file
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -152,6 +155,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
     setError(null);
     setIsLoading(false);
     setEditMode(false); // Reset edit mode when clearing
+    setModifications(new Map()); // Clear modifications when clearing
   }, []);
 
   /**
@@ -159,6 +163,105 @@ export function XMLProvider({ children }: XMLProviderProps) {
    */
   const toggleEditMode = useCallback(() => {
     setEditMode((prev) => !prev);
+  }, []);
+
+  /**
+   * Recursively update a node's text content in the tree
+   */
+  const updateNodeInTree = useCallback((node: XMLNode, nodeId: string, newValue: string): XMLNode => {
+    if (node.id === nodeId) {
+      return { ...node, textContent: newValue };
+    }
+
+    if (node.children) {
+      return {
+        ...node,
+        children: node.children.map(child => updateNodeInTree(child, nodeId, newValue))
+      };
+    }
+
+    return node;
+  }, []);
+
+  /**
+   * Update node text content
+   */
+  const updateNodeText = useCallback((nodeId: string, newValue: string) => {
+    if (!xmlData) return;
+
+    // Find the node to get original value
+    const findNode = (node: XMLNode): XMLNode | null => {
+      if (node.id === nodeId) return node;
+      if (node.children) {
+        for (const child of node.children) {
+          const found = findNode(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const targetNode = findNode(xmlData);
+    if (!targetNode) return;
+
+    const originalValue = targetNode.textContent || '';
+
+    // Only track if value actually changed from original
+    if (newValue !== originalValue) {
+      // Create modification record
+      const modification: NodeModification = {
+        nodeId,
+        originalValue,
+        newValue,
+        timestamp: new Date(),
+        type: 'textContent'
+      };
+
+      // Update modifications map
+      setModifications(prev => {
+        const updated = new Map(prev);
+        updated.set(nodeId, modification);
+        return updated;
+      });
+    } else {
+      // Value returned to original, remove modification
+      setModifications(prev => {
+        const updated = new Map(prev);
+        updated.delete(nodeId);
+        return updated;
+      });
+    }
+
+    // Update the XML tree
+    const updatedTree = updateNodeInTree(xmlData, nodeId, newValue);
+    setXmlData(updatedTree);
+
+    // Update selected node if it's the one being edited
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode({ ...selectedNode, textContent: newValue });
+    }
+  }, [xmlData, selectedNode, updateNodeInTree]);
+
+  /**
+   * Check if a node has been modified
+   */
+  const isNodeModified = useCallback((nodeId: string): boolean => {
+    return modifications.has(nodeId);
+  }, [modifications]);
+
+  /**
+   * Get modification for a node
+   */
+  const getNodeModification = useCallback((nodeId: string): NodeModification | undefined => {
+    return modifications.get(nodeId);
+  }, [modifications]);
+
+  /**
+   * Discard all modifications
+   */
+  const discardAllModifications = useCallback(() => {
+    setModifications(new Map());
+    // TODO: Reload original XML data to restore original values
   }, []);
 
   /**
@@ -191,6 +294,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
     isLoading,
     error,
     editMode,
+    modifications,
     // Actions
     loadXMLFile,
     loadFromURL,
@@ -199,6 +303,10 @@ export function XMLProvider({ children }: XMLProviderProps) {
     registerNavigationCallback,
     clearXML,
     toggleEditMode,
+    updateNodeText,
+    isNodeModified,
+    getNodeModification,
+    discardAllModifications,
   };
 
   return <XMLContext.Provider value={value}>{children}</XMLContext.Provider>;
