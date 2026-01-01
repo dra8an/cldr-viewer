@@ -29,6 +29,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const navigationCallbackRef = useRef<((nodeName: string) => void) | null>(null);
 
   /**
@@ -150,6 +151,14 @@ export function XMLProvider({ children }: XMLProviderProps) {
     setFileName(null);
     setError(null);
     setIsLoading(false);
+    setEditMode(false); // Reset edit mode when clearing
+  }, []);
+
+  /**
+   * Toggle edit mode on/off
+   */
+  const toggleEditMode = useCallback(() => {
+    setEditMode((prev) => !prev);
   }, []);
 
   /**
@@ -181,6 +190,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
     fileName,
     isLoading,
     error,
+    editMode,
     // Actions
     loadXMLFile,
     loadFromURL,
@@ -188,6 +198,7 @@ export function XMLProvider({ children }: XMLProviderProps) {
     navigateToNode,
     registerNavigationCallback,
     clearXML,
+    toggleEditMode,
   };
 
   return <XMLContext.Provider value={value}>{children}</XMLContext.Provider>;

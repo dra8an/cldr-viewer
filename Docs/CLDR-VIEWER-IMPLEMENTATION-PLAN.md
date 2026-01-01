@@ -965,12 +965,13 @@ src/
 **Status**: Complete ✅
 
 ### Phase 3: Editing (Week 3-5)
-- ✅ Edit mode toggle
-- ✅ Inline editing
-- ✅ Change tracking
-- ✅ Save/export
+- ✅ 3.1: Edit mode toggle (complete)
+- ⏳ 3.2: Inline editing (next)
+- ⏳ 3.3: Change tracking
+- ⏳ 3.4: Save/export
 
 **Estimated**: 30-40 hours
+**Status**: Phase 3.1 complete (toggle, banner, visual indicators)
 
 ### Phase 4: Advanced Features (Week 5-6)
 - ✅ Multi-locale comparison

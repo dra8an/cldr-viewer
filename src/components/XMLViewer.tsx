@@ -6,10 +6,13 @@ import { Panel, Group, Separator } from 'react-resizable-panels';
 import { TreePanel } from './TreePanel';
 import { DetailPanel } from './DetailPanel';
 import { CLDRMetadataPanel } from './CLDRMetadataPanel';
+import { useXML } from '../context/XMLContext';
 
 export function XMLViewer() {
+  const { editMode } = useXML();
+
   return (
-    <div className="h-screen flex flex-col">
+    <div className={`h-screen flex flex-col ${editMode ? 'bg-amber-50' : ''}`}>
       {/* Metadata Panel */}
       <CLDRMetadataPanel />
 

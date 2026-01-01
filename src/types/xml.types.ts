@@ -66,6 +66,9 @@ export interface XMLContextState {
 
   /** Error message if parsing or loading fails */
   error: string | null;
+
+  /** Whether edit mode is enabled */
+  editMode: boolean;
 }
 
 /**
@@ -89,6 +92,9 @@ export interface XMLContextActions {
 
   /** Clear all XML data and reset state */
   clearXML: () => void;
+
+  /** Toggle edit mode on/off */
+  toggleEditMode: () => void;
 }
 
 /**
